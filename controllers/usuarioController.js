@@ -1,5 +1,6 @@
 import { check, validationResult } from 'express-validator'
 import Usuario from "../models/Usuario.js";
+import { where } from 'sequelize';
 
 const formularioLogin = (req, res) => {
     res.render('auth/login', {
@@ -37,7 +38,26 @@ const registrar = async (req, res) => {
         })
     }
 
-    const usuario = await Usuario.create(req.body)
+    //Extracción de datos
+    const { nombre, email, password} = req.body
+
+    //Verficar que el usuario no este duplicado
+    const existeUsuario = await Usuario.findOne({ where : { email }})
+    if(existeUsuario) {
+        return res.render('auth/registro', {
+            pagina: 'Usuario Existente',
+            errores: [{ msg: 'El usuario ya se encuentra registrado'}],
+            usuario: {
+                nombre: req.body.nombre,
+                email: req.body.email
+            }
+        })
+    }
+
+    //const usuario = await Usuario.create(req.body)
+    console.log(existeUsuario)
+
+    return;
 
 }
 
