@@ -1,6 +1,8 @@
 import { check, validationResult } from 'express-validator'
 import Usuario from "../models/Usuario.js";
 import { where } from 'sequelize';
+import { generarId } from '../helpers/token.js';
+
 
 const formularioLogin = (req, res) => {
     res.render('auth/login', {
@@ -39,7 +41,7 @@ const registrar = async (req, res) => {
     }
 
     //Extracción de datos
-    const { nombre, email, password} = req.body
+    const { nombre, email, password } = req.body
 
     //Verficar que el usuario no este duplicado
     const existeUsuario = await Usuario.findOne({ where : { email }})
@@ -55,9 +57,21 @@ const registrar = async (req, res) => {
     }
 
     //const usuario = await Usuario.create(req.body)
-    console.log(existeUsuario)
+    //console.log(existeUsuario)
 
-    return;
+    //Almacenar un usuario
+    await Usuario.create({
+        nombre,
+        email,
+        password,
+        token: generarId()
+    })
+
+    //Mostrar mensaje de confirmación 
+    res.render('templates/mensaje', {
+        pagina: 'Cuenta Creada Correctamente',
+        mensaje: 'Hemos Enviado un Email de Confirmación, presiona en el enlace'
+    })
 
 }
 
