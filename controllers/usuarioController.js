@@ -2,6 +2,7 @@ import { check, validationResult } from 'express-validator'
 import Usuario from "../models/Usuario.js";
 import { where } from 'sequelize';
 import { generarId } from '../helpers/token.js';
+import { emailRegistro } from '../helpers/emails.js';
 
 
 const formularioLogin = (req, res) => {
@@ -22,7 +23,7 @@ const registrar = async (req, res) => {
     await check('email').isEmail().withMessage('Esto no parece un email').run(req)
     await check('password').isLength({ min: 4 }).withMessage('El password debe ser de al menos 4 caracteres').run(req)
     let password1 = req.body.password
-    console.log(password1)
+    //console.log(password1)
     await check('repetir_password').equals(password1).withMessage('Los password no son iguales').run(req)
 
 
@@ -43,14 +44,14 @@ const registrar = async (req, res) => {
     //Extracción de datos
     const { nombre, email, password } = req.body
 
-    //Verficar que el usuario no este duplicado
+    //Verificar que el usuario no este duplicado
     const existeUsuario = await Usuario.findOne({ where : { email }})
     if(existeUsuario) {
         return res.render('auth/registro', {
             pagina: 'Usuario Existente',
             errores: [{ msg: 'El usuario ya se encuentra registrado'}],
             usuario: {
-                nombre: req.body.nombre,
+                nombre: req.body.nombre, //Datos del placeholder
                 email: req.body.email
             }
         })
@@ -60,11 +61,19 @@ const registrar = async (req, res) => {
     //console.log(existeUsuario)
 
     //Almacenar un usuario
-    await Usuario.create({
+    //await Usuario.create({ solo crea al user
+    const usuario = await Usuario.create({
         nombre,
         email,
         password,
         token: generarId()
+    })
+
+    //Enviar email de confirmación
+    emailRegistro({
+        nombre: usuario.nombre,
+        email: usuario.email,
+        token: usuario.token
     })
 
     //Mostrar mensaje de confirmación 
@@ -75,6 +84,14 @@ const registrar = async (req, res) => {
 
 }
 
+//Función que comprueba una cuenta
+const confirmar = (req, res) => {
+    //console.log('Comprobando....')
+    //Router Dinámico se lee con pararms y no con body
+    const { token } = req.params
+    console.log( token )
+
+}
 const formularioOlvidePassword = (req, res) => {
     res.render('auth/olvide-password', {
         pagina: "Recupera tu acceso a Bienes Raices"
@@ -84,6 +101,7 @@ const formularioOlvidePassword = (req, res) => {
 export {
     formularioLogin,
     formularioRegistro,
-    formularioOlvidePassword,
-    registrar
+    registrar,
+    confirmar,
+    formularioOlvidePassword
 }

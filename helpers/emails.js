@@ -1,3 +1,4 @@
+import nodemailer from "nodemailer" 
 
 const emailRegistro = async (datos) => {
     var transport = nodemailer.createTransport({
@@ -8,6 +9,24 @@ const emailRegistro = async (datos) => {
             pass: process.env.EMAIL_PASS
         }
     });
+    //console.log(datos)
+    const {email, nombre, token} = datos
+
+    //Enviar Email
+    await transport.sendMail({
+        from: 'BienesRaices.com',
+        to: email,
+        subject: 'Confirma tu Cuenta en BienesRaices.com',
+        text: 'Confirma tu Cuenta en BienesRaices.com',
+        hmtl: `
+        <p>Hola ${nombre}, comprueba tu cuenta en bienesraice.com</p>
+        <p>Tu cuenta ya esta lista, solo debes confirmarla en el siguiente enlace: </p>
+        <a href="${process.env.BACKEND_URL}:${process.env.PORT ?? 3000}/auth/confirmar/${token}">Confirmar Cuenta</a>
+
+        <p>Si tu no creaste esta cuenta, puedes ignorar el mensaje</p>
+        `
+
+    })
 
 }
 
