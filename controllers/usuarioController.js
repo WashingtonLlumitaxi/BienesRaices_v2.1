@@ -85,11 +85,22 @@ const registrar = async (req, res) => {
 }
 
 //Función que comprueba una cuenta
-const confirmar = (req, res) => {
+const confirmar = async (req, res) => {
     //console.log('Comprobando....')
     //Router Dinámico se lee con pararms y no con body
     const { token } = req.params
-    console.log( token )
+    //console.log( token )
+    
+    //Verificar si el token es valido
+    const usuario = await Usuario.findOne({ where: {token}})
+
+    if(!usuario) {
+        return res.render('auth/confirmar-cuenta', {
+            pagina: 'Error al confirmar tu cuenta',
+            mensaje: 'Hubo un error al confirmar tu cuenta, intenta de nuevo',
+            error: true
+        })
+    }
 
 }
 const formularioOlvidePassword = (req, res) => {
