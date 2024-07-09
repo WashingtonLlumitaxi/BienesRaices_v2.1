@@ -1,8 +1,8 @@
 import { check, validationResult } from 'express-validator'
 import Usuario from "../models/Usuario.js";
-import { where } from 'sequelize';
 import { generarId } from '../helpers/token.js';
-import { emailRegistro } from '../helpers/emails.js';
+import { emailRegistro, olvidePassword } from '../helpers/emails.js';
+import { where } from 'sequelize';
 
 
 const formularioLogin = (req, res) => {
@@ -54,12 +54,12 @@ const registrar = async (req, res) => {
     const { nombre, email, password } = req.body
 
     //Verificar que el usuario no este duplicado
-    const existeUsuario = await Usuario.findOne({ where : { email }})
-    if(existeUsuario) {
+    const existeUsuario = await Usuario.findOne({ where: { email } })
+    if (existeUsuario) {
         return res.render('auth/registro', {
             pagina: 'Usuario Existente',
             csrfToken: req.csrfToken(),
-            errores: [{ msg: 'El usuario ya se encuentra registrado'}],
+            errores: [{ msg: 'El usuario ya se encuentra registrado' }],
             usuario: {
                 nombre: req.body.nombre, //Datos del placeholder
                 email: req.body.email
@@ -100,11 +100,11 @@ const confirmar = async (req, res) => {
     //Router Dinámico se lee con pararms y no con body
     const { token } = req.params
     //console.log( token )
-    
-    //Verificar si el token es valido
-    const usuario = await Usuario.findOne({ where: {token}})
 
-    if(!usuario) {
+    //Verificar si el token es valido
+    const usuario = await Usuario.findOne({ where: { token } })
+
+    if (!usuario) {
         return res.render('auth/confirmar-cuenta', {
             pagina: 'Error al confirmar tu cuenta',
             mensaje: 'Hubo un error al confirmar tu cuenta, intenta de nuevo',
@@ -130,8 +130,87 @@ const confirmar = async (req, res) => {
 }
 const formularioOlvidePassword = (req, res) => {
     res.render('auth/olvide-password', {
-        pagina: "Recupera tu acceso a Bienes Raices"
+        pagina: "Recupera tu acceso a Bienes Raices",
+        csrfToken: req.csrfToken(),
     });
+}
+
+//Resetear Password
+const resetPassword = async (req, res) => {
+        //Validación
+        await check('email').isEmail().withMessage('Esto no parece un email').run(req)
+
+    
+    
+        let resultado = validationResult(req) //resultado de la validación
+    
+        //Verificar que el resultado este vacio 
+        if (!resultado.isEmpty()) {
+
+            return res.render('auth/olvide-password', {
+                pagina: 'Crear Cuenta',
+                csrfToken: req.csrfToken(),
+                errores: resultado.array(),
+            })
+        }
+
+        //Buscar Usuario
+        const { email } = req.body
+        const usuario = await Usuario.findOne({ where : { email }})
+
+        if (!usuario) {
+            return res.render('auth/olvide-password', {
+                pagina: 'Recupera tu acceso a Bienes Raices',
+                csrfToken: req.csrfToken(),
+                errores: [{ msg: 'El Email no Pertenece a ningun usuario'}]
+            })
+        }
+
+        //Generar un token y enviar el email 
+        usuario.token = generarId();
+        await usuario.save();
+
+        //Enviar el email
+        olvidePassword({
+            email: usuario.email,
+            nombre: usuario.nombre,
+            token: usuario.token
+        })
+
+        //Renderizar el mensaje
+        //Mostrar mensaje de confirmación 
+        res.render('templates/mensaje', {
+        pagina: 'Reestablecer tu Pasword',
+        mensaje: 'Hemos Enviado un Email con instrucciones'
+    })
+
+}
+
+const comprobarToken = async (req, res) => {
+
+    const { token } = req.params;
+    const usuario = await Usuario.findOne({ where: { token }})
+    //Si no lo encuentra
+    if(!usuario) {
+        return res.render('auth/confirmar-cuenta', {
+            pagina: 'Reestablecer tu Password',
+            mensaje: 'Hubo un error al validar tu información, intenta de nuevo',
+            error: true
+        })
+    }
+
+    //Mostrar formulario para modificar el password
+    res.render('auth/reset-password', {
+        pagina: 'Reestablece tu password',
+        csrfToken: req.csrfToken()
+
+    })
+
+}
+
+const nuevoPassword = (req, res) => {
+    console.log('Guardando Password')
+
 }
 
 export {
@@ -139,5 +218,8 @@ export {
     formularioRegistro,
     registrar,
     confirmar,
-    formularioOlvidePassword
+    formularioOlvidePassword,
+    resetPassword,
+    comprobarToken,
+    nuevoPassword
 }
