@@ -1,8 +1,10 @@
-import { check, validationResult } from 'express-validator'
+import { check, validationResult } from 'express-validator';
+import bcrypt from 'bcrypt'
 import Usuario from "../models/Usuario.js";
 import { generarId } from '../helpers/token.js';
 import { emailRegistro, olvidePassword } from '../helpers/emails.js';
 import { where } from 'sequelize';
+import { render } from 'pug';
 
 
 const formularioLogin = (req, res) => {
@@ -140,8 +142,6 @@ const resetPassword = async (req, res) => {
         //Validación
         await check('email').isEmail().withMessage('Esto no parece un email').run(req)
 
-    
-    
         let resultado = validationResult(req) //resultado de la validación
     
         //Verificar que el resultado este vacio 
@@ -155,7 +155,7 @@ const resetPassword = async (req, res) => {
         }
 
         //Buscar Usuario
-        const { email } = req.body
+        const { email } = req.body //lectura del formulario 
         const usuario = await Usuario.findOne({ where : { email }})
 
         if (!usuario) {
@@ -203,13 +203,42 @@ const comprobarToken = async (req, res) => {
     res.render('auth/reset-password', {
         pagina: 'Reestablece tu password',
         csrfToken: req.csrfToken()
-
     })
 
 }
 
-const nuevoPassword = (req, res) => {
-    console.log('Guardando Password')
+const nuevoPassword = async (req, res) => {
+    //console.log('Guardando Password')
+    //Validar el password
+    await check('password').isLength({ min: 4 }).withMessage('El password debe ser de al menos 4 caracteres').run(req)
+    let resultado = validationResult(req) //resultado de la validación
+    
+    //Verificar que el resultado este vacio 
+    if (!resultado.isEmpty()) {
+        return res.render('auth/reset-password', {
+            pagina: 'Reestablece tu password',
+            csrfToken: req.csrfToken(),
+            errores: resultado.array(),
+        })
+    }
+
+    const { token } = req.params
+    const { password } = req.body
+
+    // Indentificar quien hace el cambio
+    const usuario = await Usuario.findOne( {where : {token}})
+
+    //Hashear el password
+    const salt = await bcrypt.genSalt(10)
+    usuario.password = await bcrypt.hash(password, salt);
+    usuario.token = null 
+
+    await usuario.save()
+
+    res.render('auth/confirmar-cuenta', {
+        pagina: 'Password Reestablecido',
+        mensaje: 'El password se guardo correctamente'
+    })
 
 }
 
