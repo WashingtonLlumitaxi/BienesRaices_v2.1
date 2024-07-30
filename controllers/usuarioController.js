@@ -9,15 +9,56 @@ import { render } from 'pug';
 
 const formularioLogin = (req, res) => {
     res.render('auth/login', {
-        pagina: "Iniciar Sesión"
+        pagina: "Iniciar Sesión",
+        csrfToken: req.csrfToken() //Generación del token
+
+        
     });
 }
 
-const formularioRegistro = (req, res) => {
+//Autenticar login
+const auntenticar = async (req, res) => {
+    //Validación 
+    await check('email').isEmail().withMessage("El Email es obligatorio").run(req)
+    await check('password').notEmpty().withMessage("El password es obligatorio").run(req)
 
+    let resultado = validationResult(req)
+    //Verificación que el resultado este vacio
+    if(!resultado.isEmpty()) {
+        // Errores
+        return res.render("auth/login", {
+            pagina: 'Iniciar Sesión',
+            csrfToken: req.csrfToken(),
+            errores: resultado.array()
+        })
+    }
+
+    const {email, password} = req.body
+
+    //Comprobar si el usuario existe
+    const usuario = await Usuario.findOne({ where: { email }})
+    if(!usuario) {
+            // Errores
+            return res.render("auth/login", {
+                pagina: 'Iniciar Sesión',
+                csrfToken: req.csrfToken(),
+                errores: [{msg: 'El usuario no existe'}]
+            })
+    }
+
+    //Comprobar si el usuario esta confirmado
+    if(!usuario.confirmado) {
+        return res.render("auth/login", {
+            pagina: 'Iniciar Sesión',
+            csrfToken: req.csrfToken(),
+            errores: [{msg: 'La cuenta no ha sido Confirmada'}]
+        })
+    }
+}
+
+const formularioRegistro = (req, res) => {
     //CSRF
     //console.log(req.csrfToken())
-
 
     res.render('auth/registro', {
         pagina: "Crear Cuenta",
@@ -25,7 +66,6 @@ const formularioRegistro = (req, res) => {
         csrfToken: req.csrfToken()
     });
 }
-
 
 const registrar = async (req, res) => {
     //Validación
@@ -244,6 +284,7 @@ const nuevoPassword = async (req, res) => {
 
 export {
     formularioLogin,
+    auntenticar,
     formularioRegistro,
     registrar,
     confirmar,
