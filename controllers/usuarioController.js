@@ -10,7 +10,7 @@ import { render } from 'pug';
 const formularioLogin = (req, res) => {
     res.render('auth/login', {
         pagina: "Iniciar Sesión",
-        csrfToken: req.csrfToken() //Generación del token
+        csrfToken: req.csrfToken() //Generation token 
 
         
     });
@@ -54,6 +54,8 @@ const auntenticar = async (req, res) => {
             errores: [{msg: 'La cuenta no ha sido Confirmada'}]
         })
     }
+
+    //Revisar el password
 }
 
 const formularioRegistro = (req, res) => {
